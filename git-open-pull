@@ -166,7 +166,7 @@ if [ "$ISSUE_NUMBER" == "$FEATURE_BRANCH" ]; then
     # Some people like to use the number as the prefix, try that.
     ISSUE_NUMBER=`echo $FEATURE_BRANCH | perl -p -e 's/^([0-9]+)[-_].*/\1/'`
     if [ "$ISSUE_NUMBER" == "$FEATURE_BRANCH" ]; then
-        ISSUE_NUMBER=""
+        ISSUE_NUMBER="c"
     fi
 fi
 
@@ -221,6 +221,9 @@ while [ $# -gt 0 ]; do
         --save)
             SAVE_ACCESS_TOKEN=1
             ;;
+        -r | --issue-text)
+          RAW_ISSUE=`cat $VALUE`
+          ;;
         -h | --help)
             printf "%s" "$HELP_TEXT"
             exit
@@ -294,8 +297,8 @@ else
     echo "... using saved access token"
 fi
 
-if [ -z "$ISSUE_NUMBER" ]; then
-    read -p "enter issue number (or 'c' to create): " ISSUE_NUMBER
+#if [ -z "$ISSUE_NUMBER" ]; then
+    #read -p "enter issue number (or 'c' to create): " ISSUE_NUMBER
     if [ "$ISSUE_NUMBER" == "c" ]; then
 
         TMPFILE=$(make_tmp_file)
@@ -308,22 +311,22 @@ if [ -z "$ISSUE_NUMBER" ]; then
         REPO_LABELS_JSON=`curl --silent -H "Accept: application/json" "$endpoint?access_token=$GITHUB_TOKEN&per_page=100"`
         python_helper format_labels "$REPO_LABELS_JSON" >> "$TMPFILE"
 
-        echo "
+#        echo "
 # Please enter a title and description for your new issue. The first
 # line will be used as the issue title, and any subsequent lines will
 # be used as the issue description.
 #
 # Lines starting with '#' will be ignored." >> "$TMPFILE"
 
-        $GIT_EDITOR "$TMPFILE"
-        if [ $? -ne 0 ]; then
-            echo "error: there was a problem with the editor '$GIT_EDITOR'"
-            exit 1
-        fi
+ #       $GIT_EDITOR "$TMPFILE"
+#        if [ $? -ne 0 ]; then
+#            echo "error: there was a problem with the editor '$GIT_EDITOR'"
+#            exit 1
+#        fi
 
-        RAW_ISSUE=$(egrep -v "^(#|\s?Label:)" "$TMPFILE")
-        SELECTED_LABELS=$(python_helper selected_labels "$TMPFILE")
-        rm "$TMPFILE"
+        #RAW_ISSUE=$(egrep -v "^(#|\s?Label:)" "$TMPFILE")
+        SELECTED_LABELS="" #$(python_helper selected_labels "$TMPFILE")
+#        rm "$TMPFILE"
 
         ISSUE_TITLE=$(echo "$RAW_ISSUE" | head -n 1)
         ISSUE_DESCRIPTION=$(echo "$RAW_ISSUE" | tail -n +2)
@@ -349,14 +352,15 @@ if [ -z "$ISSUE_NUMBER" ]; then
             echo "set labels $SELECTED_LABELS"
         fi
     fi
-else
-    read -p "issue number [$ISSUE_NUMBER]: " temp
-    [ -n "$temp" ] && ISSUE_NUMBER=$temp
-fi
+#else
+#    read -p "issue number [$ISSUE_NUMBER]: " temp
+#    [ -n "$temp" ] && ISSUE_NUMBER=$temp
+#fi
 
 # Do we need/want to rename the branch?
 if ! echo "$FEATURE_BRANCH" | egrep -q "^$ISSUE_NUMBER[_-]|[_-]$ISSUE_NUMBER\$"; then
-    read -p "rename branch to ${FEATURE_BRANCH}_${ISSUE_NUMBER} [y/n]:" confirm
+    #read -p "rename branch to ${FEATURE_BRANCH}_${ISSUE_NUMBER} [y/n]:" confirm
+    confirm=n
     if [ "$confirm" == "y" ] || [ -z "$confirm" ]; then
         echo "renaming local branch $FEATURE_BRANCH -> ${FEATURE_BRANCH}_${ISSUE_NUMBER}"
         $GIT_CMD branch -m "${FEATURE_BRANCH}_${ISSUE_NUMBER}" || exit 1
@@ -367,7 +371,8 @@ fi
 if [ -z "$FEATURE_BRANCH" ]; then
     read -p "enter branch to base pull request on: " FEATURE_BRANCH
 else
-    read -p "base pull request on [$FEATURE_BRANCH]: " temp
+    #read -p "base pull request on [$FEATURE_BRANCH]: " temp
+    temp=""
     [ -n "$temp" ] && FEATURE_BRANCH=$temp
 fi
 
@@ -427,7 +432,8 @@ fi
 echo "Opening pull request on $BASE_ACCOUNT/$BASE_REPO"
 echo "Issue: $ISSUE_NUMBER ($ISSUE_TITLE)"
 echo "pulling from $FEATURE_BRANCH into $BASE_ACCOUNT/$BASE_REPO branch $BASE_BRANCH"
-read -p "confirm [y/n]:" confirm
+#read -p "confirm [y/n]:" confirm
+confirm="y"
 if [ "$confirm" != "y" ]; then
     echo "exiting";
     exit 1;
