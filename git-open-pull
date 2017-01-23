@@ -170,6 +170,8 @@ if [ "$ISSUE_NUMBER" == "$FEATURE_BRANCH" ]; then
     fi
 fi
 
+ISSUE_NUMBER="c"
+
 
 # parse the command line args
 #####################
